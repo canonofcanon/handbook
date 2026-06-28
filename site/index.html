@@ -630,6 +630,14 @@ code {
 .dc-q .dc-bub{ background:var(--dc-navy); color:#fff; }
 .dc-bub{ display:inline-block; max-width:88%; padding:10px 13px; border-radius:12px;
   background:#fff; border:1px solid var(--dc-border); color:var(--dc-text); text-align:left; }
+.dc-bub p{ margin:0 0 7px; }
+.dc-bub p:last-child{ margin-bottom:0; }
+.dc-bub ol, .dc-bub ul{ margin:6px 0; padding-left:20px; }
+.dc-bub li{ margin-bottom:3px; }
+.dc-bub strong{ font-weight:800; color:var(--dc-navy); }
+.dc-bub em{ font-style:italic; }
+.dc-bub code{ font-family:var(--dc-mono); background:var(--dc-soft);
+  border:1px solid var(--dc-border); padding:0 4px; border-radius:3px; font-size:12px; color:var(--dc-navy); }
 .dc-a .dc-bub{ background:#fff; }
 .dc-care{ font-size:10.5px; color:var(--dc-muted); margin-top:6px; line-height:1.45;
   border-left:2px solid var(--dc-gold); padding-left:8px; }
@@ -679,6 +687,34 @@ code {
 
   function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function nl(s){ return esc(s).replace(/\n/g,'<br>'); }
+  // Render a safe subset of Markdown the model may use: **bold**, *italic*, `code`,
+  // numbered lists, and bullet lists. Everything is escaped first, so it stays safe.
+  function md(s){
+    s = esc(s);
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    var lines = s.split(/\n/), out = [], i = 0;
+    while (i < lines.length) {
+      if (/^\s*\d+\.\s+/.test(lines[i])) {
+        out.push('<ol>');
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+          out.push('<li>' + lines[i].replace(/^\s*\d+\.\s+/, '') + '</li>'); i++;
+        }
+        out.push('</ol>'); continue;
+      }
+      if (/^\s*[-*]\s+/.test(lines[i])) {
+        out.push('<ul>');
+        while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) {
+          out.push('<li>' + lines[i].replace(/^\s*[-*]\s+/, '') + '</li>'); i++;
+        }
+        out.push('</ul>'); continue;
+      }
+      if (lines[i].trim() === '') { i++; continue; }
+      out.push('<p>' + lines[i] + '</p>'); i++;
+    }
+    return out.join('');
+  }
 
   function open(){
     panel.classList.add('dc-open'); btn.style.display='none';
@@ -695,7 +731,7 @@ code {
   }
   function addAnswer(text, withCare){
     var d=document.createElement('div'); d.className='dc-msg dc-a';
-    var html='<span class="dc-bub">'+nl(text)+'</span>';
+    var html='<span class="dc-bub">'+md(text)+'</span>';
     if(withCare){ html+='<div class="dc-care">'+esc(CARE)+'</div>'; }
     d.innerHTML=html; msgs.appendChild(d); scroll();
   }
