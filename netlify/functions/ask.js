@@ -66,14 +66,16 @@ exports.handler = async (event) => {
         ? data.content[0].text.trim()
         : "Sorry, I couldn't generate an answer just now. Please try again, or ask a supervisor.";
 
-    // OPTIONAL logging: if you set a SLACK_WEBHOOK_URL env var, each question is posted there.
-    // Questions are anonymous (the site uses one shared password, so there's no per-person identity).
+    // OPTIONAL logging: if you set a SLACK_WEBHOOK_URL env var, each question + answer is posted there.
+    // Logs are anonymous (the site uses one shared password, so there's no per-person identity).
     if (process.env.SLACK_WEBHOOK_URL) {
       try {
         await fetch(process.env.SLACK_WEBHOOK_URL, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: "🧥 Dreamcoat AI question: " + question }),
+          body: JSON.stringify({
+            text: "🧥 *Dreamcoat AI*\n*Q:* " + question + "\n*A:* " + answer,
+          }),
         });
       } catch (e) { /* logging must never break the answer */ }
     }
