@@ -1,0 +1,9 @@
+# Netlify configuration for the SurtzMedia Handbook + Ask Dreamcoat.
+# You do not need to edit this.
+
+[build]
+  publish = "site"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
