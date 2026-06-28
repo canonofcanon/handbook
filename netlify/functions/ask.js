@@ -8,6 +8,7 @@ const HANDBOOK = require("./handbook-text.js");
 const MODEL = "claude-haiku-4-5-20251001"; // a small, fast, low-cost model
 const MAX_TOKENS = 600;            // keeps answers short (and costs low)
 const MAX_QUESTION_CHARS = 600;    // stops anyone pasting a huge prompt to misuse it
+const MAX_HISTORY_TURNS = 6;       // remember up to this many prior Q+A pairs in a chat
 
 const SYSTEM = `You are "Dreamcoat AI", the internal assistant for the SurtzMedia Company Handbook.
 
@@ -27,10 +28,19 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: "Method not allowed" };
   }
 
-  // read + sanitize the question
+  // read + sanitize the question (and any recent conversation history)
   let question = "";
+  let history = [];
   try {
-    question = (JSON.parse(event.body || "{}").question || "").toString();
+    const payload = JSON.parse(event.body || "{}");
+    question = (payload.question || "").toString();
+    if (Array.isArray(payload.history)) {
+      // keep only well-formed user/assistant turns, cap length, and trim each
+      history = payload.history
+        .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+        .slice(-MAX_HISTORY_TURNS * 2)
+        .map(m => ({ role: m.role, content: m.content.toString().slice(0, 2000) }));
+    }
   } catch (e) {
     return json(400, { answer: "Sorry, I couldn't read that question." });
   }
@@ -56,7 +66,7 @@ exports.handler = async (event) => {
         model: MODEL,
         max_tokens: MAX_TOKENS,
         system: SYSTEM,
-        messages: [{ role: "user", content: question }],
+        messages: [...history, { role: "user", content: question }],
       }),
     });
 
